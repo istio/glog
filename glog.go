@@ -21,14 +21,74 @@
 package glog
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
-// Level is a shim
+// loggingT collects all the global state of the logging setup.
+type loggingT struct {
+	// mu protects the remaining elements of this structure
+	mu        sync.Mutex
+	verbosity Level // V logging level, the value of the -v flag/
+}
+
+var logging loggingT
+
+// Level is exported because it appears in the arguments to V and is
+// the type of the v flag, which can be set programmatically.
+// It's a distinct type because we want to discriminate it from logType.
+// Variables of type level are only changed under logging.mu.
+// The -v flag is read only with atomic ops, so the state of the logging
+// module is consistent.
+
+// Level is treated as a sync/atomic int32.
+
+// Level specifies a level of verbosity for V logs. *Level implements
+// flag.Value; the -v flag is of type Level and should be modified
+// only through the flag.Value interface.
 type Level int32
+
+// get returns the value of the Level.
+func (l *Level) get() Level {
+	return Level(atomic.LoadInt32((*int32)(l)))
+}
+
+// set sets the value of the Level.
+func (l *Level) set(val Level) {
+	atomic.StoreInt32((*int32)(l), int32(val))
+}
+
+// String is part of the flag.Value interface.
+func (l *Level) String() string {
+	return strconv.FormatInt(int64(*l), 10)
+}
+
+// Get is part of the flag.Value interface.
+func (l *Level) Get() interface{} {
+	return *l
+}
+
+// Set is part of the flag.Value interface.
+func (l *Level) Set(value string) error {
+	v, err := strconv.Atoi(value)
+	if err != nil {
+		return err
+	}
+	logging.mu.Lock()
+	defer logging.mu.Unlock()
+	logging.verbosity.set(Level(v))
+	return nil
+}
+
+func init() {
+	flag.Var(&logging.verbosity, "v", "log level for V logs")
+}
 
 // Verbose is a shim
 type Verbose bool
@@ -44,25 +104,50 @@ func skipLogger() *zap.SugaredLogger {
 	return zap.L().WithOptions(zap.AddCallerSkip(1)).Sugar()
 }
 
-// V is a shim
+// max calculates the maximum of the two given Levels.
+func max(a, b Level) Level {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// V reports whether verbosity at the call site is at least the requested level.
+// The returned value is a boolean of type Verbose, which implements Info, Infoln
+// and Infof. These methods will write to the Info log if called.
+//
+// Verbosity is controlled both by the -v flag and the zap log level.
 func V(level Level) Verbose {
-	return Verbose(zap.L().Core().Enabled(zap.DebugLevel))
+	lvl := logging.verbosity.get()
+	core := zap.L().Core()
+	if core.Enabled(zap.DebugLevel) {
+		return Verbose(level <= max(Level(4), lvl))
+	}
+	if core.Enabled(zap.InfoLevel) {
+		return Verbose(level <= max(Level(2), lvl))
+	}
+	return Verbose(level <= lvl)
 }
 
 // Info is a shim
 func (v Verbose) Info(args ...interface{}) {
-	skipLogger().Debug(args...)
+	if v {
+		skipLogger().Info(args...)
+	}
 }
 
 // Infoln is a shim
 func (v Verbose) Infoln(args ...interface{}) {
-	s := fmt.Sprint(args)
-	skipLogger().Debug(s, "\n")
+	if v {
+		skipLogger().Info(fmt.Sprint(args), "\n")
+	}
 }
 
 // Infof is a shim
 func (v Verbose) Infof(format string, args ...interface{}) {
-	skipLogger().Debugf(format, args...)
+	if v {
+		skipLogger().Infof(format, args...)
+	}
 }
 
 // Info is a shim
