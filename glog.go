@@ -38,6 +38,12 @@ func Flush() {
 	zap.L().Sync()
 }
 
+// skipLogger constructs a suggared logger with an additional caller skip to
+// ensure we log the correct line number.
+func skipLogger() *zap.SugaredLogger {
+	return zap.L().WithOptions(zap.AddCallerSkip(1)).Sugar()
+}
+
 // V is a shim
 func V(level Level) Verbose {
 	return Verbose(zap.L().Core().Enabled(zap.DebugLevel))
@@ -45,129 +51,129 @@ func V(level Level) Verbose {
 
 // Info is a shim
 func (v Verbose) Info(args ...interface{}) {
-	zap.S().Debug(args...)
+	skipLogger().Debug(args...)
 }
 
 // Infoln is a shim
 func (v Verbose) Infoln(args ...interface{}) {
 	s := fmt.Sprint(args)
-	zap.S().Debug(s, "\n")
+	skipLogger().Debug(s, "\n")
 }
 
 // Infof is a shim
 func (v Verbose) Infof(format string, args ...interface{}) {
-	zap.S().Debugf(format, args...)
+	skipLogger().Debugf(format, args...)
 }
 
 // Info is a shim
 func Info(args ...interface{}) {
-	zap.S().Info(args...)
+	skipLogger().Info(args...)
 }
 
 // InfoDepth is a shim
 func InfoDepth(depth int, args ...interface{}) {
-	zap.S().Info(args...)
+	skipLogger().Info(args...)
 }
 
 // Infoln is a shim
 func Infoln(args ...interface{}) {
 	s := fmt.Sprint(args)
-	zap.S().Info(s, "\n")
+	skipLogger().Info(s, "\n")
 }
 
 // Infof is a shim
 func Infof(format string, args ...interface{}) {
-	zap.S().Infof(format, args...)
+	skipLogger().Infof(format, args...)
 }
 
 // Warning is a shim
 func Warning(args ...interface{}) {
-	zap.S().Warn(args...)
+	skipLogger().Warn(args...)
 }
 
 // WarningDepth is a shim
 func WarningDepth(depth int, args ...interface{}) {
-	zap.S().Warn(args...)
+	skipLogger().Warn(args...)
 }
 
 // Warningln is a shim
 func Warningln(args ...interface{}) {
 	s := fmt.Sprint(args)
-	zap.S().Warn(s, "\n")
+	skipLogger().Warn(s, "\n")
 }
 
 // Warningf is a shim
 func Warningf(format string, args ...interface{}) {
-	zap.S().Warnf(format, args...)
+	skipLogger().Warnf(format, args...)
 }
 
 // Error is a shim
 func Error(args ...interface{}) {
-	zap.S().Error(args...)
+	skipLogger().Error(args...)
 }
 
 // ErrorDepth is a shim
 func ErrorDepth(depth int, args ...interface{}) {
-	zap.S().Error(args...)
+	skipLogger().Error(args...)
 }
 
 // Errorln is a shim
 func Errorln(args ...interface{}) {
 	s := fmt.Sprint(args)
-	zap.S().Error(s, "\n")
+	skipLogger().Error(s, "\n")
 }
 
 // Errorf is a shim
 func Errorf(format string, args ...interface{}) {
-	zap.S().Errorf(format, args...)
+	skipLogger().Errorf(format, args...)
 }
 
 // Fatal is a shim
 func Fatal(args ...interface{}) {
-	zap.S().Error(args...)
+	skipLogger().Error(args...)
 	os.Exit(255)
 }
 
 // FatalDepth is a shim
 func FatalDepth(depth int, args ...interface{}) {
-	zap.S().Error(args...)
+	skipLogger().Error(args...)
 	os.Exit(255)
 }
 
 // Fatalln is a shim
 func Fatalln(args ...interface{}) {
 	s := fmt.Sprint(args)
-	zap.S().Error(s, "\n")
+	skipLogger().Error(s, "\n")
 	os.Exit(255)
 }
 
 // Fatalf is a shim
 func Fatalf(format string, args ...interface{}) {
-	zap.S().Errorf(format, args...)
+	skipLogger().Errorf(format, args...)
 	os.Exit(255)
 }
 
 // Exit is a shim
 func Exit(args ...interface{}) {
-	zap.S().Error(args...)
+	skipLogger().Error(args...)
 	os.Exit(1)
 }
 
 // ExitDepth is a shim
 func ExitDepth(depth int, args ...interface{}) {
-	zap.S().Error(args...)
+	skipLogger().Error(args...)
 	os.Exit(1)
 }
 
 // Exitln is a shim
 func Exitln(args ...interface{}) {
 	s := fmt.Sprint(args)
-	zap.S().Error(s, "\n")
+	skipLogger().Error(s, "\n")
 	os.Exit(1)
 }
 
 // Exitf is a shim
 func Exitf(format string, args ...interface{}) {
-	zap.S().Errorf(format, args...)
+	skipLogger().Errorf(format, args...)
 	os.Exit(1)
 }
