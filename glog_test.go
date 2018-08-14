@@ -44,3 +44,9 @@ func TestAll(t *testing.T) {
 
 	Flush()
 }
+
+func BenchmarkSkipLogger(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		skipLogger()
+	}
+}
