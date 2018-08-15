@@ -108,16 +108,20 @@ func Flush() {
 // ensure we log the correct line number.
 func skipLogger() *zap.SugaredLogger {
 	logging.mu.RLock()
-	cached := (logging.logger != nil && logging.zapGlobal != nil && logging.zapGlobal == zap.L())
+	cachedGlobal := logging.zapGlobal
+	cachedLogger := logging.logger
 	logging.mu.RUnlock()
 
-	if !cached {
+	global := zap.L()
+	if cachedGlobal != global {
 		logging.mu.Lock()
-		defer logging.mu.Unlock()
-		logging.logger = zap.L().WithOptions(zap.AddCallerSkip(1)).Sugar()
-		logging.zapGlobal = zap.L()
+		logging.zapGlobal = global
+		logging.logger = global.WithOptions(zap.AddCallerSkip(1)).Sugar()
+		cachedLogger = logging.logger
+		logging.mu.Unlock()
 	}
-	return logging.logger
+
+	return cachedLogger
 }
 
 // max calculates the maximum of the two given Levels.
