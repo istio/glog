@@ -18,7 +18,7 @@
 // Istio is built on top of zap logger. We depend on some downstream components that use glog for logging.
 // This package makes it so we can intercept the calls to glog and redirect them to zap and thus produce
 // a consistent log for our processes.
-package glog
+package klog
 
 import (
 	"fmt"
