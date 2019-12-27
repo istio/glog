@@ -27,6 +27,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// Verbosity, 0-10 level of logging
+var Verbosity = 10
+
 // Level is a shim
 type Level int32
 
@@ -40,23 +43,29 @@ func Flush() {
 
 // V is a shim
 func V(level Level) Verbose {
-	return Verbose(zap.L().Core().Enabled(zap.DebugLevel))
+	return Verbose(int(level) <= Verbosity && zap.L().Core().Enabled(zap.DebugLevel))
 }
 
 // Info is a shim
 func (v Verbose) Info(args ...interface{}) {
-	zap.S().Debug(args...)
+	if v {
+		zap.S().Debug(args...)
+	}
 }
 
 // Infoln is a shim
 func (v Verbose) Infoln(args ...interface{}) {
-	s := fmt.Sprint(args)
-	zap.S().Debug(s, "\n")
+	if v {
+		s := fmt.Sprint(args...)
+		zap.S().Debug(s, "\n")
+	}
 }
 
 // Infof is a shim
 func (v Verbose) Infof(format string, args ...interface{}) {
-	zap.S().Debugf(format, args...)
+	if v {
+		zap.S().Debugf(format, args...)
+	}
 }
 
 // Info is a shim
@@ -71,7 +80,7 @@ func InfoDepth(depth int, args ...interface{}) {
 
 // Infoln is a shim
 func Infoln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Info(s, "\n")
 }
 
@@ -92,7 +101,7 @@ func WarningDepth(depth int, args ...interface{}) {
 
 // Warningln is a shim
 func Warningln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Warn(s, "\n")
 }
 
@@ -113,7 +122,7 @@ func ErrorDepth(depth int, args ...interface{}) {
 
 // Errorln is a shim
 func Errorln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Error(s, "\n")
 }
 
@@ -136,7 +145,7 @@ func FatalDepth(depth int, args ...interface{}) {
 
 // Fatalln is a shim
 func Fatalln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Error(s, "\n")
 	os.Exit(255)
 }
@@ -161,7 +170,7 @@ func ExitDepth(depth int, args ...interface{}) {
 
 // Exitln is a shim
 func Exitln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Error(s, "\n")
 	os.Exit(1)
 }
