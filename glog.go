@@ -21,14 +21,23 @@
 package glog
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
 	"go.uber.org/zap"
 )
 
-// Verbosity, 0-10 level of logging
-var Verbosity = 10
+var verbosity = 10
+
+// InitFlags is for explicitly initializing the flags.
+func InitFlags(flagset *flag.FlagSet) {
+	if flagset == nil {
+		return
+	}
+
+	flagset.IntVar(&verbosity, "v", 10, "level 0-10 of verbosity, increasing")
+}
 
 // Level is a shim
 type Level int32
@@ -43,7 +52,7 @@ func Flush() {
 
 // V is a shim
 func V(level Level) Verbose {
-	return Verbose(int(level) <= Verbosity && zap.L().Core().Enabled(zap.DebugLevel))
+	return Verbose(int(level) <= verbosity && zap.L().Core().Enabled(zap.DebugLevel))
 }
 
 // Info is a shim
