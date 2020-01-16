@@ -23,12 +23,50 @@ package glog
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"sync"
 
 	"go.uber.org/zap"
 )
 
+var verbosity Level
+
+func init() {
+	verbosity.Set("10")
+}
+
+var mu sync.Mutex
+
 // Level is a shim
 type Level int32
+
+// String is part of the flag.Value interface.
+func (l *Level) String() string {
+	mu.Lock()
+	defer mu.Unlock()
+	return strconv.FormatInt(int64(*l), 10)
+}
+
+// Get is part of the flag.Value interface.
+func (l *Level) Get() interface{} {
+	mu.Lock()
+	defer mu.Unlock()
+	return *l
+}
+
+// Set is part of the flag.Value interface.
+// Used to set global verbosity level
+func (l *Level) Set(value string) error {
+	v, err := strconv.ParseInt(value, 10, 32)
+	if err != nil {
+		return err
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	*l = Level(v)
+	return nil
+}
 
 // Verbose is a shim
 type Verbose bool
@@ -40,23 +78,32 @@ func Flush() {
 
 // V is a shim
 func V(level Level) Verbose {
-	return Verbose(zap.L().Core().Enabled(zap.DebugLevel))
+	isEnabled := zap.L().Core().Enabled(zap.DebugLevel)
+	mu.Lock()
+	defer mu.Unlock()
+	return Verbose(level <= verbosity && isEnabled)
 }
 
 // Info is a shim
 func (v Verbose) Info(args ...interface{}) {
-	zap.S().Debug(args...)
+	if v {
+		zap.S().Debug(args...)
+	}
 }
 
 // Infoln is a shim
 func (v Verbose) Infoln(args ...interface{}) {
-	s := fmt.Sprint(args)
-	zap.S().Debug(s, "\n")
+	if v {
+		s := fmt.Sprint(args...)
+		zap.S().Debug(s, "\n")
+	}
 }
 
 // Infof is a shim
 func (v Verbose) Infof(format string, args ...interface{}) {
-	zap.S().Debugf(format, args...)
+	if v {
+		zap.S().Debugf(format, args...)
+	}
 }
 
 // Info is a shim
@@ -71,7 +118,7 @@ func InfoDepth(depth int, args ...interface{}) {
 
 // Infoln is a shim
 func Infoln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Info(s, "\n")
 }
 
@@ -92,7 +139,7 @@ func WarningDepth(depth int, args ...interface{}) {
 
 // Warningln is a shim
 func Warningln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Warn(s, "\n")
 }
 
@@ -113,7 +160,7 @@ func ErrorDepth(depth int, args ...interface{}) {
 
 // Errorln is a shim
 func Errorln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Error(s, "\n")
 }
 
@@ -136,7 +183,7 @@ func FatalDepth(depth int, args ...interface{}) {
 
 // Fatalln is a shim
 func Fatalln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Error(s, "\n")
 	os.Exit(255)
 }
@@ -161,7 +208,7 @@ func ExitDepth(depth int, args ...interface{}) {
 
 // Exitln is a shim
 func Exitln(args ...interface{}) {
-	s := fmt.Sprint(args)
+	s := fmt.Sprint(args...)
 	zap.S().Error(s, "\n")
 	os.Exit(1)
 }
