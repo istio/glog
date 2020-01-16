@@ -23,14 +23,50 @@ package glog
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"sync"
 
 	"go.uber.org/zap"
 )
 
-var Verbosity = 10
+var verbosity Level
+
+func init() {
+	verbosity.Set("10")
+}
+
+var mu sync.Mutex
 
 // Level is a shim
 type Level int32
+
+// String is part of the flag.Value interface.
+func (l *Level) String() string {
+	mu.Lock()
+	defer mu.Unlock()
+	return strconv.FormatInt(int64(*l), 10)
+}
+
+// Get is part of the flag.Value interface.
+func (l *Level) Get() interface{} {
+	mu.Lock()
+	defer mu.Unlock()
+	return *l
+}
+
+// Set is part of the flag.Value interface.
+// Used to set global verbosity level
+func (l *Level) Set(value string) error {
+	v, err := strconv.ParseInt(value, 10, 32)
+	if err != nil {
+		return err
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	*l = Level(v)
+	return nil
+}
 
 // Verbose is a shim
 type Verbose bool
@@ -42,7 +78,10 @@ func Flush() {
 
 // V is a shim
 func V(level Level) Verbose {
-	return Verbose(int(level) <= Verbosity && zap.L().Core().Enabled(zap.DebugLevel))
+	isEnabled := zap.L().Core().Enabled(zap.DebugLevel)
+	mu.Lock()
+	defer mu.Unlock()
+	return Verbose(level <= verbosity && isEnabled)
 }
 
 // Info is a shim
